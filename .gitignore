@@ -1,0 +1,7 @@
+# Ignore compiled binaries
+*.exe
+*.out
+*.o
+
+# OS generated files
+.DS_Store

@@ -1,0 +1,33 @@
+# Limit Order Book (LOB) Matching Engine
+
+A low-latency limit order book matching engine written in standard C++. 
+
+I built this to simulate the core infrastructure of a high-frequency trading exchange. The engine strictly enforces Price-Time Priority matching and is optimized to avoid O(N) memory shifting during order cancellations or fills.
+
+## Memory Architecture
+
+To achieve microsecond latency, the engine relies on two standard library data structures:
+
+1. **Price Levels (`std::map`)** A Red-Black Tree is used to maintain price levels. Bids are sorted descending (`std::greater`), and Asks are sorted ascending. This guarantees O(log N) time complexity for finding the best bid/ask and checking if the spread has been crossed.
+
+2. **Order Queues (`std::list`)**
+   At each individual price level, orders are stored in a doubly-linked list. In a real-world scenario where a trader cancels a resting order, this allows the engine to pop that order out of the middle of the queue in O(1) time without forcing the CPU to shift a contiguous array (`std::vector`) in memory. 
+
+## Performance Benchmark
+
+The `main()` function includes a high-frequency stress test that generates random algorithmic orders (mixed buys/sells with random quantities and prices). 
+
+**Current Benchmark (Local Machine):**
+- Ingested & processed **100,000 orders**
+- Total execution time: **~70 milliseconds**
+
+## How to Run
+
+Because this relies purely on the C++ Standard Template Library, there are no external dependencies or build systems required. It is contained entirely in a single `engine.cpp` file for easy reading.
+
+Clone the repository and compile using g++:
+
+```bash
+g++ engine.cpp -o engine
+./engine
+```
