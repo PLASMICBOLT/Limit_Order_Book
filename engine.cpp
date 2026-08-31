@@ -4,7 +4,8 @@
 #include <string>
 #include <algorithm>
 #include <chrono>
-#include <unordered_map> // NEW: Required for O(1) lookups
+#include <unordered_map> 
+#include <vector>
 
 using namespace std;
 using namespace std::chrono;
@@ -180,20 +181,43 @@ int main() {
     int num_orders = 100000;
     cout << "Benchmarking with " << num_orders << " random orders...\n";
 
-    auto start = high_resolution_clock::now();
+    vector<double> latencies;
+    latencies.reserve(num_orders);
+
+    auto total_start = high_resolution_clock::now();
 
     for (int i = 0; i < num_orders; ++i) {
         bool is_buy = rand() % 2; 
         double price = 100.0 + (rand() % 100); 
         int qty = 10 + (rand() % 90); 
+        Order new_order = {"ID_" + to_string(i), is_buy, price, qty, i};
         
-        engine.addOrder({"ID_" + to_string(i), is_buy, price, qty, i});
+        // Measure individual order latency
+        auto order_start = high_resolution_clock::now();
+        engine.addOrder(new_order);
+        auto order_end = high_resolution_clock::now();
+        
+        auto duration = duration_cast<nanoseconds>(order_end - order_start);
+        latencies.push_back(duration.count() / 1000.0); // Store in microseconds
     }
 
-    auto end = high_resolution_clock::now();
-    auto duration = duration_cast<milliseconds>(end - start);
+    auto total_end = high_resolution_clock::now();
+    auto total_duration = duration_cast<milliseconds>(total_end - total_start);
 
-    cout << "Processed 100k orders in: " << duration.count() << " ms\n";
+    // Calculate Percentiles
+    sort(latencies.begin(), latencies.end());
+    double p50 = latencies[num_orders * 0.50];
+    double p95 = latencies[num_orders * 0.95];
+    double p99 = latencies[num_orders * 0.99];
+    
+    // Calculate Throughput (Orders per second)
+    double total_seconds = total_duration.count() / 1000.0;
+    double throughput = num_orders / total_seconds;
 
+    cout << "Processed 100k orders in: " << total_duration.count() << " ms\n";
+    cout << "Throughput: " << throughput << " orders/sec\n";
+    cout << "p50 Latency: " << p50 << " microseconds\n";
+    cout << "p95 Latency: " << p95 << " microseconds\n";
+    cout << "p99 Latency: " << p99 << " microseconds\n";
     return 0;
 }
